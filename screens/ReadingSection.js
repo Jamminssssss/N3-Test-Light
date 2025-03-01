@@ -13,6 +13,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import SQLite from 'react-native-sqlite-storage';
 import ImageZoom from 'react-native-image-pan-zoom';  // You'll need to install this package
 import questions from '../data/questions';  // Import questions
+import UnderlinedQuestion from '../components/UnderlinedQuestion'; // 추가
+import UnderlinedOption from "../components/UnderlinedOption"; // 추가
 
 SQLite.enablePromise(true);
 
@@ -243,60 +245,62 @@ export default function ReadingSection({ navigation }) {
   }
 
   // Quiz progress screen
-  return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollView}>
-        <View style={styles.questionContainer}>
-          <ScrollView
-            style={styles.questionScroll}
-            nestedScrollEnabled={true}
-          >
-            <Text style={styles.question}>
-              {currentQuestion.question}
-            </Text>
-            {currentQuestion.image && (
-              <TouchableOpacity onPress={() => setShowImageModal(true)}>
-                <Image
-                  source={currentQuestion.image}
-                  style={styles.questionImage}
-                />
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-        </View>
-
-        <View style={styles.optionsContainer}>
-          <ScrollView nestedScrollEnabled={true}>
-            {currentQuestion.options.map((option) => (
-              <TouchableOpacity
-                key={option.id}
-                style={[
-                  styles.optionButton,
-                  selectedAnswer === option.id && currentQuestion.correctAnswer === option.id && styles.correctOption,
-                  selectedAnswer === option.id && currentQuestion.correctAnswer !== option.id && styles.wrongOption,
-                  selectedAnswer !== null && currentQuestion.correctAnswer === option.id && styles.correctOption,
-                ]}
-                onPress={() => handleAnswerPress(option.id)}
-                disabled={selectedAnswer !== null}
-              >
-                <Text style={styles.optionText}>{option.text}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          {showNextButton && (
-            <TouchableOpacity
-              style={[styles.optionButton, styles.nextButton]}
-              onPress={handleNextPress}
-            >
-              <Text style={[styles.optionText, styles.nextButtonText]}>次の問題</Text>
+return (
+  <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.scrollView}>
+      <View style={styles.questionContainer}>
+        <ScrollView style={styles.questionScroll} nestedScrollEnabled={true}>
+          <UnderlinedQuestion 
+            question={currentQuestion.question} 
+            underlineWords={currentQuestion.underlineWords} 
+          />
+          
+          {currentQuestion.image && (
+            <TouchableOpacity onPress={() => setShowImageModal(true)}>
+              <Image source={currentQuestion.image} style={styles.questionImage} />
             </TouchableOpacity>
           )}
-        </View>
-      </ScrollView>
-      <ImageModal />
-      <ResultModal />
-    </View>
-  );
+        </ScrollView>
+      </View>
+
+      <View style={styles.optionsContainer}>
+        <ScrollView nestedScrollEnabled={true}>
+          {currentQuestion.options.map((option) => (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.optionButton,
+                selectedAnswer === option.id && currentQuestion.correctAnswer === option.id && styles.correctOption,
+                selectedAnswer === option.id && currentQuestion.correctAnswer !== option.id && styles.wrongOption,
+                selectedAnswer !== null && currentQuestion.correctAnswer === option.id && styles.correctOption,
+              ]}
+              onPress={() => handleAnswerPress(option.id)}
+              disabled={selectedAnswer !== null}
+            >
+              <Text style={styles.optionText}>
+      <UnderlinedOption 
+        optionText={option.text} 
+        highlightWords={option.highlightWords || []} 
+      />
+    </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {showNextButton && (
+          <TouchableOpacity
+            style={[styles.optionButton, styles.nextButton]}
+            onPress={handleNextPress}
+          >
+            <Text style={[styles.optionText, styles.nextButtonText]}>次の問題</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </ScrollView>
+    <ImageModal />
+    <ResultModal />
+  </View>
+);
 }
 
 const styles = StyleSheet.create({

@@ -6,7 +6,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import ReadingSection from './screens/ReadingSection';
 import ListeningSection from './screens/ListeningSection';
 import SplashScreen from 'react-native-splash-screen';
-import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { BannerAd, BannerAdSize, AppOpenAd, AdEventType } from 'react-native-google-mobile-ads';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,8 +21,13 @@ const bottomBannerAdUnitId = Platform.select({
   android: 'ca-app-pub-3940256099942544/6300978111',
 });
 
+const appOpenAdUnitId = Platform.select({
+  ios: 'ca-app-pub-3940256099942544/5575463023',
+  android: 'ca-app-pub-3940256099942544/9257395921',
+});
+
 interface BannerProps {
-  adUnitId: string | undefined; // Allow undefined
+  adUnitId?: string; // 광고 ID가 없을 경우를 대비하여 선택적 프로퍼티로 설정
 }
 
 const TopBanner: React.FC<BannerProps> = ({ adUnitId }) => (
@@ -53,13 +58,35 @@ const BottomBanner: React.FC<BannerProps> = ({ adUnitId }) => (
   </View>
 );
 
-
 export default function App() {
-  // 스플래시 화면을 3초 후에 숨김
   useEffect(() => {
+    // 스플래시 화면을 3초 후에 숨김
     const timeout = setTimeout(() => {
       SplashScreen.hide();
     }, 3000);
+
+    // 앱 오프닝 광고 로드 및 표시
+    const loadAndShowAppOpenAd = async () => {
+      if (!appOpenAdUnitId) return; // 광고 ID가 없는 경우 실행하지 않음
+
+      const appOpenAd = AppOpenAd.createForAdRequest(appOpenAdUnitId, {
+        requestNonPersonalizedAdsOnly: true,
+      });
+
+      appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
+        console.log('앱 오프닝 광고 로드됨');
+        appOpenAd.show(); // 광고 표시
+      });
+
+      appOpenAd.addAdEventListener(AdEventType.ERROR, (error) => {
+        console.log('앱 오프닝 광고 로드 실패:', error);
+      });
+
+      await appOpenAd.load();
+    };
+
+    loadAndShowAppOpenAd();
+    
     return () => clearTimeout(timeout);
   }, []);
 
@@ -111,7 +138,6 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
   },
-  // 탭 바 스타일 수정
   tabBar: {
     position: 'absolute',
     bottom: 0,
@@ -124,20 +150,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     paddingVertical: 0,
   },
-  // 아이콘 컨테이너 스타일
-  iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    height: '100%',
-  },
-  // 상단 배너 스타일
   topBannerContainer: {
     width: '100%',
     alignItems: 'center',
     backgroundColor: 'white',
   },
-  // 하단 배너 스타일
   bottomBannerContainer: {
     width: '100%',
     alignItems: 'center',
