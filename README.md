@@ -1,5 +1,23 @@
-<<<<<<< HEAD
 # N3-Test-Light
+
+  <img src="https://github.com/user-attachments/assets/abf8b3db-fe49-4025-bed9-2e83036b9fd5" width="200">
+  <img src="https://github.com/user-attachments/assets/5d9cc8f7-3c91-49f3-a2a4-f9cda9a1edc7" width="200">
+  <img src="https://github.com/user-attachments/assets/91a730c5-c33b-4153-831d-cf607ccae4de" width="200">
+  <img src="https://github.com/user-attachments/assets/fb8976b0-b6dd-404d-897c-e56c967c911e" width="200">
+
+
+
+# App features and introduction
+
+This is an app that allows you to test the Japanese Language Proficiency Test JLPT N3.
+
+Provides reading questions submitted to the exam.
+
+Provides listening questions to be submitted to the exam.
+
+If you touch an incorrect answer, you'll see a red view and a green view for the correct answer.
+
+
 JLPT N3 TEST APP
 =======
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
@@ -99,4 +117,3 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
->>>>>>> 9dd482d (Initial commit)
