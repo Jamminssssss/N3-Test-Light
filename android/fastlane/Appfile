@@ -1,2 +1,0 @@
-json_key_file(ENV["PLAY_STORE_JSON_KEY"]) # ⬅️ 환경변수로부터 JSON 키 파일 경로
-package_name(ENV["PACKAGE_NAME"])         # ⬅️ 환경변수로부터 패키지 이름
