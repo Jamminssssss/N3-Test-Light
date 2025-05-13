@@ -53,6 +53,9 @@ yarn-error.log
 **/fastlane/screenshots
 **/fastlane/test_output
 
+# fastlane 민감한 파일들 제외
+.env # 환경변수 파일
+
 # Bundle artifact
 *.jsbundle
 
@@ -73,3 +76,6 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# explicitly include info.plist
+!info.plist

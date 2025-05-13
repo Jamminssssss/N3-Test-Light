@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, Platform } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Platform, useColorScheme, Dimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -9,6 +9,9 @@ import SplashScreen from 'react-native-splash-screen';
 import { BannerAd, BannerAdSize, AppOpenAd, AdEventType } from 'react-native-google-mobile-ads';
 
 const Tab = createBottomTabNavigator();
+
+const { width } = Dimensions.get('window');
+const isIPad = Platform.OS === 'ios' && Platform.isPad;
 
 // 광고 단위 ID 설정 (iOS와 Android에서 다르게 설정)
 const topBannerAdUnitId = Platform.select({
@@ -35,7 +38,7 @@ const TopBanner: React.FC<BannerProps> = ({ adUnitId }) => (
     {adUnitId && (
       <BannerAd
         unitId={adUnitId}
-        size={BannerAdSize.FULL_BANNER}
+        size={isIPad ? BannerAdSize.ANCHORED_ADAPTIVE_BANNER : BannerAdSize.FULL_BANNER}
         requestOptions={{
           requestNonPersonalizedAdsOnly: true,
         }}
@@ -49,7 +52,7 @@ const BottomBanner: React.FC<BannerProps> = ({ adUnitId }) => (
     {adUnitId && (
       <BannerAd
         unitId={adUnitId}
-        size={BannerAdSize.FULL_BANNER}
+        size={isIPad ? BannerAdSize.ANCHORED_ADAPTIVE_BANNER : BannerAdSize.FULL_BANNER}
         requestOptions={{
           requestNonPersonalizedAdsOnly: true,
         }}
@@ -59,6 +62,8 @@ const BottomBanner: React.FC<BannerProps> = ({ adUnitId }) => (
 );
 
 export default function App() {
+  const colorScheme = useColorScheme(); // 다크 모드/라이트 모드 확인
+
   useEffect(() => {
     // 스플래시 화면을 3초 후에 숨김
     const timeout = setTimeout(() => {
@@ -86,19 +91,19 @@ export default function App() {
     };
 
     loadAndShowAppOpenAd();
-    
+
     return () => clearTimeout(timeout);
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? 'black' : 'white' }]}>
       <TopBanner adUnitId={topBannerAdUnitId} />
       <View style={styles.mainContent}>
         <NavigationContainer>
           <Tab.Navigator
             initialRouteName="Reading"
             screenOptions={{
-              tabBarStyle: styles.tabBar,
+              tabBarStyle: [styles.tabBar, { backgroundColor: colorScheme === 'dark' ? 'black' : 'white' }],
               headerShown: false,
             }}
           >
@@ -133,7 +138,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
   },
   mainContent: {
     flex: 1,
@@ -144,7 +148,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 64, // 터치 영역 확보를 위해 높이 증가
-    backgroundColor: 'white',
     borderTopWidth: 0,
     elevation: 0,
     shadowOpacity: 0,
@@ -153,11 +156,15 @@ const styles = StyleSheet.create({
   topBannerContainer: {
     width: '100%',
     alignItems: 'center',
-    backgroundColor: 'white',
+    ...(isIPad && {
+      minHeight: 90,
+    }),
   },
   bottomBannerContainer: {
     width: '100%',
     alignItems: 'center',
-    backgroundColor: 'white',
+    ...(isIPad && {
+      minHeight: 90,
+    }),
   },
 });

@@ -1,47 +1,87 @@
 import React, { useState, useLayoutEffect, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ScrollView, 
-  Image,
-  Modal,
-  Dimensions
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Modal,Dimensions,useColorScheme, Platform } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import SQLite from 'react-native-sqlite-storage';
-import ImageZoom from 'react-native-image-pan-zoom';  // You'll need to install this package
-import questions from '../data/questions';  // Import questions
-import UnderlinedQuestion from '../components/UnderlinedQuestion'; // 추가
-import UnderlinedOption from "../components/UnderlinedOption"; // 추가
+import ImageZoom from 'react-native-image-pan-zoom';
+import questions from '../data/questions';
+import UnderlinedQuestion from '../components/UnderlinedQuestion';
+import UnderlinedOption from "../components/UnderlinedOption";
+import { InterstitialAd, AdEventType } from 'react-native-google-mobile-ads';
 
 SQLite.enablePromise(true);
+
+// 전면 광고 단위 ID 설정
+const interstitialAdUnitId = Platform.select({
+  ios: 'ca-app-pub-3940256099942544/4411468910',
+  android: 'ca-app-pub-3940256099942544/1033173712',
+});
+
+// 전면 광고 객체 생성
+const interstitialAd = InterstitialAd.createForAdRequest(interstitialAdUnitId, {
+  requestNonPersonalizedAdsOnly: true,
+});
+
+const { width, height } = Dimensions.get('window');
+const isIPad = Platform.OS === 'ios' && Platform.isPad;
 
 export default function ReadingSection({ navigation }) {
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showNextButton, setShowNextButton] = useState(false);
-  const [db, setDb] = useState(null);  // State for database instance
+  const [db, setDb] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const currentQuestion = questions[currentQuestionIndex];
-  const windowWidth = Dimensions.get('window').width;
-  const windowHeight = Dimensions.get('window').height;
   const [correctCount, setCorrectCount] = useState(0);
   const [wrongCount, setWrongCount] = useState(0);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [adLoaded, setAdLoaded] = useState(false);
 
+  // 다크모드 감지 hook 사용
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
 
+  // 다크모드에 따른 색상 테마 설정
+  // 다크모드일 때 사용할 색상
+  const theme = {
+    backgroundColor: isDarkMode ? 'black' : 'white',
+    textColor: isDarkMode ? 'white' : 'black',
+    borderColor: isDarkMode ? '#444' : '#ccc',
+    cardBackground: isDarkMode ? '#222' : 'white',
+    primaryButtonColor: isDarkMode ? '#1a6bb8' : '#2196F3',
+    modalBackground: isDarkMode ? 'rgba(0, 0, 0, 0.95)' : 'rgba(0, 0, 0, 0.9)',
+    modalContentBackground: isDarkMode ? 'rgba(40, 40, 40, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+    optionBorderColor: isDarkMode ? '#666' : '#aaa',
+  };
+
+   // 광고 이벤트 설정
+   useEffect(() => {
+    const onAdLoaded = () => setAdLoaded(true);
+    const onAdClosed = () => {
+      setAdLoaded(false);
+      interstitialAd.load(); // 광고가 닫히면 새로운 광고 로드
+    };
+  
+    const unsubscribeLoaded = interstitialAd.addAdEventListener(AdEventType.LOADED, onAdLoaded);
+    const unsubscribeClosed = interstitialAd.addAdEventListener(AdEventType.CLOSED, onAdClosed);
+  
+    interstitialAd.load(); // 최초 광고 로드
+  
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeClosed();
+    };
+  }, []);
+  
   // Initialize SQLite database and load progress
   useEffect(() => {
     const openDatabase = async () => {
       try {
         const dbInstance = await SQLite.openDatabase({ name: 'quiz.db', location: 'default' });
-        setDb(dbInstance);  // Save the database instance to state
+        setDb(dbInstance);
         await dbInstance.transaction(tx => {
           tx.executeSql(
-            'CREATE TABLE IF NOT EXISTS progress (id INTEGER PRIMARY KEY, currentQuestionIndex INTEGER, selectedAnswer INTEGER);'
+            'CREATE TABLE IF NOT EXISTS progress (id INTEGER PRIMARY KEY, currentQuestionIndex INTEGER, selectedAnswer INTEGER, showNextButton INTEGER);'
           );
         });
 
@@ -55,7 +95,7 @@ export default function ReadingSection({ navigation }) {
                 const progress = results.rows.item(0);
                 setCurrentQuestionIndex(progress.currentQuestionIndex || 0);
                 setSelectedAnswer(progress.selectedAnswer || null);
-                setShowNextButton(progress.showNextButton === 1); 
+                setShowNextButton(progress.showNextButton === 1);
               }
             }
           );
@@ -82,32 +122,35 @@ export default function ReadingSection({ navigation }) {
     if (db) {
       db.transaction(tx => {
         tx.executeSql(
-          'REPLACE INTO progress (id, currentQuestionIndex, selectedAnswer) VALUES (1, ?, ?)',
-          [currentQuestionIndex, answerIndex]
+          'REPLACE INTO progress (id, currentQuestionIndex, selectedAnswer, showNextButton) VALUES (1, ?, ?, ?)',
+          [currentQuestionIndex, answerIndex, 1]  // 1은 true를 의미
         );
       });
     }
   };
 
-  // Handle the "Next" button press
-  const handleNextPress = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setSelectedAnswer(null);
-      setShowNextButton(false);
-
-      if (db) {
-        db.transaction(tx => {
-          tx.executeSql(
-            'REPLACE INTO progress (id, currentQuestionIndex, selectedAnswer) VALUES (1, ?, ?)',
-            [currentQuestionIndex + 1, null]
-          );
-        });
-      }
-    } else {
-      setShowResultModal(true); // 결과 모달 표시
+// Handle the "Next" button press
+const handleNextPress = () => {
+  const nextIndex = currentQuestionIndex + 1; // Define nextIndex
+  if (currentQuestionIndex < questions.length - 1) {
+    setCurrentQuestionIndex(nextIndex);
+    setSelectedAnswer(null);
+    setShowNextButton(false);
+    if (db) {
+      db.transaction(tx => {
+        tx.executeSql(
+          'REPLACE INTO progress (id, currentQuestionIndex, selectedAnswer, showNextButton) VALUES (1, ?, ?, ?)',
+          [nextIndex, null, 0]  // 0은 false를 의미
+        );
+      });
     }
-  };
+    if (nextIndex + 1 === 10 && adLoaded) {
+      interstitialAd.show();
+    }
+  } else {   
+    setShowResultModal(true);
+  }
+};
 
   // Reset the quiz state
   const resetQuizState = () => {
@@ -134,8 +177,12 @@ export default function ReadingSection({ navigation }) {
     if (showQuiz) {
       navigation.setOptions({
         headerShown: true,
-        tabBarStyle: { display: 'none' }, // 하단 탭 숨기기
-        headerTitle: '',
+        tabBarStyle: { display: 'none' },
+        headerTitle: '', // You can set this to any title if needed
+        headerStyle: {
+          backgroundColor: isDarkMode ? '#333' : '#f9f9f9', // Dark background for dark mode
+        },
+        headerTintColor: isDarkMode ? 'white' : 'black', // Title text color for dark mode
         headerLeft: () => (
           <TouchableOpacity
             onPress={() => {
@@ -143,17 +190,18 @@ export default function ReadingSection({ navigation }) {
             }}
             style={styles.closeButton}
           >
-            <Ionicons name="close-outline" size={24} color="black" /> 
+            <Ionicons name="close-outline" size={30} color="red" />
           </TouchableOpacity>
         ),
       });
     } else {
       navigation.setOptions({
         headerShown: false,
-        tabBarStyle: { display: 'flex' }, // 하단 탭 다시 보이기
+        tabBarStyle: { display: 'flex' },
       });
     }
-  }, [navigation, showQuiz]);
+  }, [navigation, showQuiz, isDarkMode]); // Added isDarkMode to the dependency array
+  
 
  
   //줌인 기능 
@@ -162,8 +210,11 @@ export default function ReadingSection({ navigation }) {
       transparent={true}
       visible={showImageModal}
       onRequestClose={() => setShowImageModal(false)}
+      animationType="fade"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent={true}
     >
-      <View style={styles.modalContainer}>
+      <View style={[styles.modalContainer, { backgroundColor: 'rgba(0, 0, 0, 0.9)' }]}>
         <TouchableOpacity
           style={styles.modalCloseButton}
           onPress={() => setShowImageModal(false)}
@@ -172,10 +223,13 @@ export default function ReadingSection({ navigation }) {
         </TouchableOpacity>
         
         <ImageZoom
-          cropWidth={windowWidth}
-          cropHeight={windowHeight}
-          imageWidth={windowWidth}
-          imageHeight={windowHeight * 0.7}
+          cropWidth={width}
+          cropHeight={height}
+          imageWidth={width}
+          imageHeight={height * 0.7}
+          enableSwipeDown={true}
+          onSwipeDown={() => setShowImageModal(false)}
+          style={{ backgroundColor: 'transparent' }}
         >
           <Image
             source={currentQuestion.image}
@@ -185,8 +239,8 @@ export default function ReadingSection({ navigation }) {
         </ImageZoom>
 
         {currentQuestion.explanation && (
-          <View style={styles.explanationContainer}>
-            <Text style={styles.explanationText}>
+          <View style={[styles.explanationContainer, { backgroundColor: theme.modalContentBackground }]}>
+            <Text style={[styles.explanationText, { color: theme.textColor }]}>
               {currentQuestion.explanation}
             </Text>
           </View>
@@ -195,7 +249,7 @@ export default function ReadingSection({ navigation }) {
     </Modal>
   );
 
-  const ResultModal = () => {
+   const ResultModal = () => {
     const totalQuestions = correctCount + wrongCount;
     const accuracy = totalQuestions > 0 ? ((correctCount / totalQuestions) * 100).toFixed(2) : 0;
   
@@ -230,130 +284,201 @@ export default function ReadingSection({ navigation }) {
   // Show quiz or button to start quiz
   if (!showQuiz) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+        {/* 다크모드에 따라 컨테이너 배경색 변경 */}
         <View style={styles.buttonContainer}>
           <Ionicons
-            name="book" // Book icon using Ionicons
-            size={50} // Icon size
-            color="black" // Icon color
-            onPress={() => setShowQuiz(true)} // Handle press to show the quiz
+            name="book"
+            size={50}
+            color={theme.textColor} // 다크모드에 따라 아이콘 색상 변경
+            onPress={() => setShowQuiz(true)}
           />
-          <Text style={styles.text}>Jlpt 3 言語知識,読解</Text> 
+          <Text style={[styles.text, { color: theme.textColor }]}>
+            {/* 다크모드에 따라 텍스트 색상 변경 */}
+            Jlpt 3 言語知識,読解
+          </Text> 
         </View>
       </View>
     );
   }
 
   // Quiz progress screen
-return (
-  <View style={styles.container}>
-    <ScrollView contentContainerStyle={styles.scrollView}>
-      <View style={styles.questionContainer}>
-        <ScrollView style={styles.questionScroll} nestedScrollEnabled={true}>
-          <UnderlinedQuestion 
-            question={currentQuestion.question} 
-            underlineWords={currentQuestion.underlineWords} 
-          />
-          
-          {currentQuestion.image && (
-            <TouchableOpacity onPress={() => setShowImageModal(true)}>
-              <Image source={currentQuestion.image} style={styles.questionImage} />
+  return (
+    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      {/* 다크모드에 따라 컨테이너 배경색 변경 */}
+      <ScrollView contentContainerStyle={styles.scrollView}>
+        <View style={[styles.questionContainer, { marginBottom: currentQuestion.image ? (isIPad ? 40 : 40) : 10 }]}>
+          <View 
+            style={[
+              styles.questionScroll, 
+              { 
+                backgroundColor: theme.cardBackground,
+                borderColor: theme.borderColor,
+              }
+            ]} 
+          >
+            <View style={[
+              styles.questionContentWrapper,
+              {
+                justifyContent: currentQuestion.image ? 'flex-start' : 'center',
+                minHeight: currentQuestion.image ? 'auto' : 200
+              }
+            ]}>
+            <UnderlinedQuestion 
+              question={currentQuestion.question} 
+              underlineWords={currentQuestion.underlineWords}
+                textColor={theme.textColor}
+            />
+            
+            {currentQuestion.image && (
+                <TouchableOpacity 
+                  onPress={() => setShowImageModal(true)}
+                  style={styles.imageContainer}
+                >
+                <Image source={currentQuestion.image} style={styles.questionImage} />
+              </TouchableOpacity>
+            )}
+            </View>
+          </View>
+        </View>
+
+        <View style={[
+          styles.optionsContainer, 
+          { 
+            backgroundColor: theme.cardBackground,
+            borderColor: theme.borderColor
+          }
+        ]}>
+          {/* 다크모드에 따라 옵션 컨테이너 배경색과 테두리 색상 변경 */}
+          <ScrollView nestedScrollEnabled={true}>
+            {currentQuestion.options.map((option) => (
+              <TouchableOpacity
+                key={option.id}
+                style={[
+                  styles.optionButton,
+                  { 
+                    backgroundColor: theme.cardBackground,
+                    borderColor: theme.optionBorderColor
+                  },
+                  selectedAnswer === option.id && currentQuestion.correctAnswer === option.id && styles.correctOption,
+                  selectedAnswer === option.id && currentQuestion.correctAnswer !== option.id && styles.wrongOption,
+                  selectedAnswer !== null && currentQuestion.correctAnswer === option.id && styles.correctOption,
+                ]}
+                onPress={() => handleAnswerPress(option.id)}
+                disabled={selectedAnswer !== null}
+              >
+                <Text style={[styles.optionText, { color: theme.textColor }]}>
+                  {/* 다크모드에 따라 옵션 텍스트 색상 변경 */}
+                  <UnderlinedOption 
+                    optionText={option.text} 
+                    highlightWords={option.highlightWords || []}
+                    textColor={theme.textColor} // UnderlinedOption 컴포넌트에 textColor prop 전달 (컴포넌트에 해당 prop 추가 필요)
+                  />
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {showNextButton && (
+            <TouchableOpacity
+              style={[
+                styles.optionButton, 
+                styles.nextButton, 
+                { backgroundColor: theme.primaryButtonColor }
+              ]}
+              onPress={handleNextPress}
+            >
+              <Text style={[styles.optionText, styles.nextButtonText]}>次の問題</Text>
             </TouchableOpacity>
           )}
-        </ScrollView>
-      </View>
-
-      <View style={styles.optionsContainer}>
-        <ScrollView nestedScrollEnabled={true}>
-          {currentQuestion.options.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              style={[
-                styles.optionButton,
-                selectedAnswer === option.id && currentQuestion.correctAnswer === option.id && styles.correctOption,
-                selectedAnswer === option.id && currentQuestion.correctAnswer !== option.id && styles.wrongOption,
-                selectedAnswer !== null && currentQuestion.correctAnswer === option.id && styles.correctOption,
-              ]}
-              onPress={() => handleAnswerPress(option.id)}
-              disabled={selectedAnswer !== null}
-            >
-              <Text style={styles.optionText}>
-      <UnderlinedOption 
-        optionText={option.text} 
-        highlightWords={option.highlightWords || []} 
-      />
-    </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {showNextButton && (
-          <TouchableOpacity
-            style={[styles.optionButton, styles.nextButton]}
-            onPress={handleNextPress}
-          >
-            <Text style={[styles.optionText, styles.nextButtonText]}>次の問題</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </ScrollView>
-    <ImageModal />
-    <ResultModal />
-  </View>
-);
+        </View>
+      </ScrollView>
+      <ImageModal />
+      <ResultModal />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: 'white',
+    padding: isIPad ? 20 : 20,
   },
   scrollView: {
     paddingBottom: 30,
+    ...(isIPad && {
+      flexGrow: 1,
+      justifyContent: 'center',
+    }),
   },
   questionContainer: {
+    ...(isIPad ? {
+      flex: 0,
+      alignItems: 'center',
+      marginBottom: 20,
+      width: '100%',
+    } : {
+      flex: 1,
     marginBottom: 40,
-    flex: 1,
+    }),
   },
   questionScroll: {
-    padding: 10,
+    padding: isIPad ? 30 : 10,
     borderRadius: 8,
     borderWidth: 1,
-    flexShrink: 1,
+    width: isIPad ? '90%' : '100%',
+    ...(isIPad && {
+      alignSelf: 'center',
+    }),
+  },
+  questionContentWrapper: {
+    ...(isIPad ? {
+      alignItems: 'center',
+      paddingVertical: 30,
+    } : {
+      paddingVertical: 10,
+    }),
   },
   question: {
-    fontSize: 20,
+    fontSize: isIPad ? 32 : 20,
     fontWeight: 'bold',
     textAlign: 'center',
+    lineHeight: isIPad ? 48 : 28,
   },
   questionImage: {
-    width: '100%',
-    height: 350,
-    marginTop: 10,
+    width: isIPad ? width * 0.7 : '100%',
+    height: isIPad ? height * 0.4 : 350,
+    marginTop: isIPad ? 30 : 10,
     resizeMode: 'contain',
+    alignSelf: 'center',
+  },
+  noImageSpacing: {
+    marginTop: 0,
   },
   optionsContainer: {
-    marginVertical: 25,
-    maxHeight: 500,
-    padding: 15,
+    marginVertical: isIPad ? 20 : 25,
+    maxHeight: isIPad ? undefined : 500,
+    padding: isIPad ? 25 : 15,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
+    width: isIPad ? '90%' : '100%',
+    alignSelf: isIPad ? 'center' : 'stretch',
+    ...(isIPad && {
+      flex: 0,
+    }),
   },
   optionButton: {
-    padding: 15,
+    padding: isIPad ? 25 : 15,
     borderWidth: 1,
-    borderColor: '#aaa',
-    marginVertical: 10,
+    marginVertical: isIPad ? 12 : 10,
     borderRadius: 8,
-    backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',
   },
   optionText: {
-    fontSize: 18,
+    fontSize: isIPad ? 24 : 18,
     textAlign: 'center',
+    lineHeight: isIPad ? 36 : 24,
   },
   correctOption: {
     backgroundColor: 'green',
@@ -368,18 +493,22 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 15,
+    top: '50%',
     left: 10,
     zIndex: 10,
     padding: 0,
     margin: 0,
+    transform: [{ translateY: -15 }], // 아이콘 크기의 절반만큼 위로 이동
   },
   nextButton: {
     padding: 20,
-    backgroundColor: '#2196F3',
+    // backgroundColor은 theme.primaryButtonColor로 동적으로 설정
     borderRadius: 8,
     alignItems: 'center',
     marginVertical: 12,
+  },
+  nextButtonText: {
+    color: 'white',
   },
   extraSpace: {
     height: 30,
@@ -387,12 +516,12 @@ const styles = StyleSheet.create({
   text: {
     marginTop: 10,
     fontSize: 16,
-    color: 'black',
+    // color는 theme.textColor로 동적으로 설정
     fontWeight: 'bold',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    // backgroundColor은 theme.modalBackground로 동적으로 설정
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -412,11 +541,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     padding: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    // backgroundColor은 theme.modalContentBackground로 동적으로 설정
   },
   explanationText: {
     fontSize: 16,
-    color: 'black',
+    // color는 theme.textColor로 동적으로 설정
   },
   zoomHintContainer: {
     position: 'absolute',
@@ -434,7 +563,7 @@ const styles = StyleSheet.create({
     color: 'black',
   },
   resultBox: {
-    backgroundColor: 'white',
+    // backgroundColor은 theme.cardBackground로 동적으로 설정
     padding: 20,
     borderRadius: 12,
     alignItems: 'center',
@@ -444,14 +573,16 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
+    // color는 theme.textColor로 동적으로 설정
   },
   resultText: {
     fontSize: 18,
     marginVertical: 5,
+    // color는 theme.textColor로 동적으로 설정
   },
   restartButton: {
     marginTop: 20,
-    backgroundColor: '#2196F3',
+    // backgroundColor은 theme.primaryButtonColor로 동적으로 설정
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -460,5 +591,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  imageContainer: {
+    marginTop: 20,
+    alignItems: 'center',
   },
 });
