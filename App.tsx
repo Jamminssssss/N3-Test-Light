@@ -5,6 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import ReadingSection from './screens/ReadingSection';
 import ListeningSection from './screens/ListeningSection';
+import JlptVocaSection from './screens/JlptVocaSection';
+import GrammarSection from './screens/GrammarSection';
 import SplashScreen from 'react-native-splash-screen';
 import { BannerAd, BannerAdSize, AppOpenAd, AdEventType } from 'react-native-google-mobile-ads';
 
@@ -125,6 +127,25 @@ export default function App() {
                   <Ionicons name="headset" color={color} size={24} />
                 ),
                 tabBarLabel: "Listening",
+              }}
+            />
+              <Tab.Screen
+              name="Voca"
+              component={JlptVocaSection}
+              options={{
+                tabBarIcon: ({ color }) => (
+                  <Ionicons name="text" color={color} size={24} />
+                ),
+                tabBarLabel: "Voca",
+              }}
+            />
+            <Tab.Screen
+              name="Grammar"
+              component={GrammarSection}
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="language" size={size} color={color} />
+                ),
               }}
             />
           </Tab.Navigator>

@@ -224,7 +224,7 @@ PLATFORMS
 
 DEPENDENCIES
   dotenv
-  fastlane (~> 2.227)
+  fastlane
   fastlane-plugin-increment_version_code
   fastlane-plugin-versioning
 

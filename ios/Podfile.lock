@@ -1837,6 +1837,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - SocketRocket (0.7.1)
+  - TextToSpeech (4.1.1):
+    - React-Core
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -1917,6 +1919,7 @@ DEPENDENCIES:
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSound (from `../node_modules/react-native-sound`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
+  - TextToSpeech (from `../node_modules/react-native-tts`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -2077,6 +2080,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-sound"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
+  TextToSpeech:
+    :path: "../node_modules/react-native-tts"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -2090,7 +2095,7 @@ SPEC CHECKSUMS:
   Google-Mobile-Ads-SDK: 14a8e52164a89a44178bd67d544f207969f8d69a
   GoogleUserMessagingPlatform: a8b56893477f67212fbc8411c139e61d463349f5
   hermes-engine: b417d2b2aee3b89b58e63e23a51e02be91dc876d
-  RCT-Folly: 36fe2295e44b10d831836cc0d1daec5f8abcf809
+  RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
   RCTDeprecation: b2eecf2d60216df56bc5e6be5f063826d3c1ee35
   RCTRequired: 78522de7dc73b81f3ed7890d145fa341f5bb32ea
   RCTTypeSafety: c135dd2bf50402d87fd12884cbad5d5e64850edd
@@ -2159,6 +2164,7 @@ SPEC CHECKSUMS:
   RNSound: 314cc5226453ef4a3314a196c65e8a65e5106a7b
   RNVectorIcons: bd818296a51dc2bb8c3bd97a3ca399df1afe216d
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
+  TextToSpeech: 89b239221ec378d213af422d14789a729705360b
   Yoga: afd04ff05ebe0121a00c468a8a3c8080221cb14c
 
 PODFILE CHECKSUM: 77538ca2c74d8f6250056374f520f8f8002aecbb

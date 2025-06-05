@@ -4,8 +4,7 @@ source "https://rubygems.org"
 
 # gem "rails"
 
-gem "fastlane", "~> 2.227"
-gem "fastlane-plugin-versioning"
+gem "fastlane"
 gem 'dotenv'
 
 plugins_path = File.join(File.dirname(__FILE__), 'fastlane', 'Pluginfile')
